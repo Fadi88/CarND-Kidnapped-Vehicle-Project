@@ -91,6 +91,22 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 	//   observed measurement to this particular landmark.
 	// NOTE: this method will NOT be called by the grading code. But you will probably find it useful to 
 	//   implement this method and use it as a helper during the updateWeights phase.
+
+	for(int obs_idx = 0 ; obs_idx < observations.size() ; obs_idx++){
+
+		observations[obs_idx].id = predicted[0].id;
+
+		double min_dist = dist(observations[obs_idx].x , observations[obs_idx].y , predicted[0].x , predicted[0].y);
+
+		for(int pred_idx = 1 ; pred_idx < predicted.size() ; pred_idx++){
+
+			if(min_dist > dist(observations[obs_idx].x , observations[obs_idx].y , predicted[pred_idx].x , predicted[pred_idx].y)){
+				min_dist = dist(observations[obs_idx].x , observations[obs_idx].y , predicted[pred_idx].x , predicted[pred_idx].y);
+				observations[obs_idx].id = predicted[pred_idx].id;
+			}
+		}
+
+	}
 }
 
 void ParticleFilter::updateWeights(double sensor_range, double std_landmark[], 
@@ -105,6 +121,52 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 	//   and the following is a good resource for the actual equation to implement (look at equation 
 	//   3.33
 	//   http://planning.cs.uiuc.edu/node99.html
+
+	for(int prt_idx = 0 ; prt_idx < particles.size() ; prt_idx++){
+
+		//step 1 get landmarks within detection range
+
+		vector<LandmarkObs> possible_lms;
+		for (int lm_idx = 0; lm_idx < map_landmarks.landmark_list.size(); lm_idx++){
+
+			if(
+			    fabs(particles[prt_idx].x - map_landmarks.landmark_list[lm_idx].x_f) <= sensor_range
+			&&  fabs(particles[prt_idx].y - map_landmarks.landmark_list[lm_idx].y_f) <= sensor_range
+			  ){
+				LandmarkObs placeholder;
+
+				placeholder.id  = map_landmarks.landmark_list[lm_idx].id_i ;
+				placeholder.x   = map_landmarks.landmark_list[lm_idx].x_f ;
+				placeholder.y   = map_landmarks.landmark_list[lm_idx].y_f ;
+
+				possible_lms.push_back(placeholder);
+
+			}
+		}
+
+		//step 2 transform observation to map coordiantes
+
+		vector<LandmarkObs> transformed_observations;
+
+		for(int obs_idx = 0 ; 	obs_idx < observations.size() ; obs_idx++){
+			LandmarkObs placeholder;
+
+			placeholder.x = particles[prt_idx].x;
+			placeholder.y = particles[prt_idx].y;
+
+			placeholder.x += (cos(particles[prt_idx].theta) * observations[obs_idx].x) - (sin(particles[prt_idx].theta) * observations[obs_idx].y);
+			placeholder.y += (sin(particles[prt_idx].theta) * observations[obs_idx].x) + (cos(particles[prt_idx].theta) * observations[obs_idx].y);
+
+			transformed_observations.push_back(placeholder);
+
+		}
+
+		//step 3 map obesarvation to possible nearest landmark
+			
+		this->dataAssociation( possible_lms , transformed_observations );
+
+		//step 4 calucate new particle weight based on the new obesrvations mapping
+	}
 }
 
 void ParticleFilter::resample() {
