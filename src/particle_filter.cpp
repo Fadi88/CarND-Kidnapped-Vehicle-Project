@@ -233,7 +233,7 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 			}*/
 
 			particles[prt_idx].weight *=  get_weight(m_obs_x , m_obs_y , lm_x , lm_y , std_landmark[0] , std_landmark[1]);
-			std::cout<< "lm : " << lm_x << " , " << lm_y << " . obs : " <<  m_obs_x << " , " << m_obs_y << " . weight : "<< particles[prt_idx].weight <<std::endl;
+			//std::cout<< "lm : " << lm_x << " , " << lm_y << " . obs : " <<  m_obs_x << " , " << m_obs_y << " . weight : "<< particles[prt_idx].weight <<std::endl;
 			
 		}
 		 
