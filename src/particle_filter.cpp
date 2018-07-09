@@ -34,9 +34,9 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	for(int i = 0 ; i < num_particles ; i++){
 		Particle *tmp = new Particle();
 
-		tmp->x     = dist_x    (gen);
-		tmp->y     = dist_y    (gen);
-		tmp->theta = dist_theta(gen);
+		tmp->x      = dist_x    (gen);
+		tmp->y      = dist_y    (gen);
+		tmp->theta  = dist_theta(gen);
 
 		particles.push_back(*tmp);
 		weights.push_back(1.0);
@@ -46,6 +46,7 @@ void ParticleFilter::init(double x, double y, double theta, double std[]) {
 	is_initialized = true;
 
 }
+
 
 void ParticleFilter::prediction(double delta_t, double std_pos[], double velocity, double yaw_rate) {
 	// TODO: Add measurements to each particle and add random Gaussian noise.
@@ -94,15 +95,15 @@ void ParticleFilter::dataAssociation(std::vector<LandmarkObs> predicted, std::ve
 
 	for(int obs_idx = 0 ; obs_idx < observations.size() ; obs_idx++){
 
-		observations[obs_idx].id = predicted[0].id;
 
-		double min_dist = dist(observations[obs_idx].x , observations[obs_idx].y , predicted[0].x , predicted[0].y);
+		double min_dist = numeric_limits<double>::max();
 
-		for(int pred_idx = 1 ; pred_idx < predicted.size() ; pred_idx++){
+		for(int pred_idx = 0 ; pred_idx < predicted.size() ; pred_idx++){
 
 			if(min_dist > dist(observations[obs_idx].x , observations[obs_idx].y , predicted[pred_idx].x , predicted[pred_idx].y)){
 				min_dist = dist(observations[obs_idx].x , observations[obs_idx].y , predicted[pred_idx].x , predicted[pred_idx].y);
-				observations[obs_idx].id = predicted[pred_idx].id;
+				//observations[obs_idx].id = predicted[pred_idx].id;
+				observations[obs_idx].mapped = &predicted[pred_idx];
 			}
 		}
 
@@ -147,9 +148,11 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		//step 2 transform observation to map coordiantes
 
 		vector<LandmarkObs> transformed_observations;
-
+		
 		for(int obs_idx = 0 ; 	obs_idx < observations.size() ; obs_idx++){
 			LandmarkObs placeholder;
+
+			placeholder.mapped = NULL ;			
 
 			placeholder.x = particles[prt_idx].x;
 			placeholder.y = particles[prt_idx].y;
@@ -166,6 +169,22 @@ void ParticleFilter::updateWeights(double sensor_range, double std_landmark[],
 		this->dataAssociation( possible_lms , transformed_observations );
 
 		//step 4 calucate new particle weight based on the new obesrvations mapping
+
+		particles[prt_idx].weight = 1.0/(2.0 * M_PI * std_landmark[0] * std_landmark[1]);
+
+		for(int obs_idx = 0 ; 	obs_idx < transformed_observations.size() ; obs_idx++){
+
+			double m_obs_x =  transformed_observations[obs_idx].x ;
+			double m_obs_y =  transformed_observations[obs_idx].x ;
+
+			double lm_x = transformed_observations[obs_idx].mapped->x ;
+			double lm_y = transformed_observations[obs_idx].mapped->y ;
+
+			particles[prt_idx].weight *=  exp(-1.0 * ((pow((m_obs_x- lm_x), 2) / (2.0 * std_landmark[0] * std_landmark[0])) + (pow((m_obs_y - lm_y), 2) / (2.0 * std_landmark[1] * std_landmark[1]))));
+			
+		}
+		weights[prt_idx] = particles[prt_idx].weight;
+		
 	}
 }
 
